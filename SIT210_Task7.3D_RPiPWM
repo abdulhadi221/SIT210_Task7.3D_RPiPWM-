@@ -1,0 +1,79 @@
+import RPi.GPIO as GPIO
+import time
+
+
+GPIO.setmode(GPIO.BCM)
+
+BUZZER = 25
+GPIO_TRIGGER = 23
+GPIO_ECHO = 24
+
+GPIO.setup(BUZZER, GPIO.OUT)
+GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
+GPIO.setup(GPIO_ECHO, GPIO.IN)
+
+def distance():
+  
+  GPIO.output(GPIO_TRIGGER, True) 
+  time.sleep(0.00001) 
+  GPIO.output(GPIO_TRIGGER, False) 
+ 
+  start = time.time()
+  stop = time.time()
+  while GPIO.input(GPIO_ECHO) == 0:
+    start = time.time()
+
+  while GPIO.input(GPIO_ECHO) == 1:
+    stop = time.time()
+ 
+  measuredTime = stop - start
+  # Calculate the travel distance by multiplying the measured time by speed of sound
+  distanceBothWays = measuredTime * 33112 # cm/s in 20 degrees Celsius
+  # Divide the distance by 2 to get the actual distance from sensor to obstacle
+  distance = distanceBothWays / 2
+
+  print("Gap between obstacle and sensor : {0:5.1f}cm".format(distance))
+  
+  return distance
+
+def beep_freq():
+  gap = distance()
+  #Beeping intensity conditions
+  if gap > 50:
+    return -1
+  elif gap <= 50 and gap >=30:
+    return 1
+  elif gap < 30 and gap >= 20:
+    return 0.5
+  elif gap < 20 and gap >= 10:
+    return 0.25
+  else:
+    return 0
+
+# Main 
+def main():
+  try:
+       while True:
+      # Get the beeping frequency
+          freq = beep_freq()
+      # No beeping
+          if freq == -1:
+            GPIO.output(BUZZER, False)
+            time.sleep(0.25)
+      # Constant beeping
+          elif freq == 0:
+            GPIO.output(BUZZER, True)
+            time.sleep(0.25)
+      # Beeping on certain frequency
+          else:
+            GPIO.output(BUZZER, True)
+            time.sleep(0.2) # Beep is 0.2 seconds long
+            GPIO.output(BUZZER, False)
+            time.sleep(freq) # Pause between beeps = beeping frequency
+  except KeyboardInterrupt:
+    GPIO.output(BUZZER, False)
+    GPIO.cleanup()
+
+
+if __name__ == "__main__":
+    main()
